@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蛋仔派对 资源获取器</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: 'U5Font';
+    src: url('https://party.res.netease.com/pc/gw/20230509182436/font/U5Font_Round_7744b500.ttf') format('truetype');
+    font-weight: normal; font-style: normal; font-display: swap;
+  }
+  :root {
+    --md-sys-color-primary: #0057D9;
+    --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-primary-container: #D8E2FF;
+    --md-sys-color-on-primary-container: #001551;
+    --md-sys-color-secondary: #C0006A;
+    --md-sys-color-on-secondary: #FFFFFF;
+    --md-sys-color-secondary-container: #FFD8E8;
+    --md-sys-color-on-secondary-container: #3D0021;
+    --md-sys-color-surface: #F8F9FF;
+    --md-sys-color-surface-variant: #E1E2EC;
+    --md-sys-color-on-surface: #1A1C27;
+    --md-sys-color-on-surface-variant: #44464F;
+    --md-sys-color-outline: #767680;
+    --md-sys-color-outline-variant: #C6C6D0;
+    --md-sys-color-surface-container-lowest: #FFFFFF;
+    --md-sys-color-surface-container-low: #F2F3FA;
+    --md-sys-color-surface-container: #EBEBF4;
+    --md-sys-color-surface-container-highest: #E0E0E9;
+    --md-sys-color-error: #BA1A1A;
+    --md-sys-color-error-container: #FFDAD6;
+    --md-shape-corner-extra-large: 28px;
+    --md-shape-corner-large: 16px;
+    --md-shape-corner-medium: 12px;
+    --md-shape-corner-small: 8px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'U5Font', 'Google Sans', 'Noto Sans SC', sans-serif;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+  .top-app-bar {
+    background: var(--md-sys-color-surface-container-low);
+    padding: 0 20px; height: 64px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    flex-shrink: 0;
+  }
+  .app-icon {
+    width: 40px; height: 40px;
+    background: var(--md-sys-color-primary-container);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--md-sys-color-primary); font-size: 22px; flex-shrink: 0;
+  }
+  .app-title {
+    font-family: 'U5Font', 'Google Sans Display', 'Noto Sans SC', sans-serif;
+    font-size: 21px; font-weight: 500; flex: 1;
+  }
+  .version-chip {
+    font-size: 12px; color: var(--md-sys-color-on-surface-variant);
+    background: var(--md-sys-color-surface-container);
+    padding: 5px 12px; border-radius: 100px;
+    display: none; align-items: center; gap: 5px; white-space: nowrap;
+  }
+  .version-chip.visible { display: flex; }
+  .version-chip .material-icons-round { font-size: 14px; color: var(--md-sys-color-primary); }
+
+  #loading-screen {
+    position: fixed; inset: 0;
+    background: var(--md-sys-color-surface);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 24px;
+    z-index: 200;
+    transition: opacity .4s ease;
+  }
+  #loading-screen.fade-out { opacity: 0; pointer-events: none; }
+  #loading-screen.fade-out .linear-progress-bar { animation-play-state: paused; }
+  .loading-icon-wrap {
+    width: 80px; height: 80px;
+    background: var(--md-sys-color-primary-container);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--md-sys-color-primary); font-size: 36px;
+    animation: pulse-icon 2s ease-in-out infinite;
+  }
+  @keyframes pulse-icon { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+  .loading-title { font-size: 18px; font-weight: 500; }
+  .loading-sub   { font-size: 14px; color: var(--md-sys-color-on-surface-variant); }
+  .linear-progress {
+    width: 280px; height: 4px;
+    background: var(--md-sys-color-surface-variant);
+    border-radius: 2px; overflow: hidden;
+  }
+  .linear-progress-bar {
+    height: 100%; background: var(--md-sys-color-primary);
+    border-radius: 2px;
+    animation: indeterminate 2s linear infinite;
+    transform-origin: left center;
+  }
+  @keyframes indeterminate {
+    0%   { transform: translateX(-120%) scaleX(.4); }
+    25%  { transform: translateX(-20%)  scaleX(.5); }
+    50%  { transform: translateX(50%)   scaleX(.5); }
+    75%  { transform: translateX(120%)  scaleX(.4); }
+    100% { transform: translateX(220%)  scaleX(.3); }
+  }
+
+  #error-screen {
+    flex: 1; display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; padding: 48px; text-align: center;
+  }
+  .error-icon-wrap {
+    width: 80px; height: 80px;
+    background: var(--md-sys-color-error-container);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--md-sys-color-error); font-size: 36px;
+  }
+  .error-title { font-size: 18px; font-weight: 500; }
+  .error-msg { font-size: 14px; color: var(--md-sys-color-on-surface-variant); max-width: 360px; line-height: 1.6; }
+
+  #main-app {
+    flex: 1; min-height: 0; overflow: hidden;
+    display: none; flex-direction: column;
+    padding: 14px 16px; gap: 10px;
+    max-width: 1200px; width: 100%; margin: 0 auto;
+  }
+  #main-app.visible { display: flex; }
+
+  .filter-row {
+    display: flex; gap: 8px; align-items: center;
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  .segment-group {
+    display: flex;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 100px; overflow: hidden; flex-shrink: 0;
+  }
+  .segment-btn {
+    padding: 8px 20px; font-size: 14px; font-weight: 500; font-family: inherit;
+    border: none; background: transparent; color: var(--md-sys-color-on-surface);
+    cursor: pointer; transition: background .15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .segment-btn .material-icons-round { font-size: 18px; }
+  .segment-btn.active { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+  .segment-btn:hover:not(.active) { background: var(--md-sys-color-surface-container); }
+
+  .search-bar {
+    flex: 1; min-width: 180px; max-width: 420px;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--md-sys-color-surface-container-highest);
+    border-radius: 100px; padding: 0 16px; height: 40px;
+    outline: 1.5px solid transparent; transition: outline .15s, background .15s;
+  }
+  .search-bar:focus-within { outline-color: var(--md-sys-color-primary); background: var(--md-sys-color-surface-container-lowest); }
+  .search-bar .material-icons-round { font-size: 20px; color: var(--md-sys-color-on-surface-variant); flex-shrink: 0; }
+  .search-bar input { flex: 1; border: none; background: transparent; outline: none; font-size: 14px; font-family: inherit; color: var(--md-sys-color-on-surface); }
+  .search-bar input::placeholder { color: var(--md-sys-color-on-surface-variant); }
+  .search-clear { display: none; background: none; border: none; cursor: pointer; color: var(--md-sys-color-on-surface-variant); padding: 2px; border-radius: 50%; flex-shrink: 0; }
+  .search-clear .material-icons-round { font-size: 18px; }
+  .count-label { font-size: 12px; color: var(--md-sys-color-on-surface-variant); white-space: nowrap; }
+
+  .list-card {
+    background: var(--md-sys-color-surface-container-lowest);
+    border-radius: var(--md-shape-corner-large);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    overflow: hidden; flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
+  }
+  .list-header {
+    display: grid; grid-template-columns: 1fr 130px;
+    padding: 10px 16px; font-size: 12px; font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
+    background: var(--md-sys-color-surface-container-low);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    flex-shrink: 0; user-select: none;
+  }
+  .col-sort { display: flex; align-items: center; gap: 3px; cursor: pointer; }
+  .col-sort .material-icons-round { font-size: 14px; opacity: 0; transition: opacity .15s; }
+  .col-sort .material-icons-round.visible { opacity: 1; }
+  .col-right { text-align: right; justify-content: flex-end; }
+  .list-body { flex: 1; overflow-y: auto; min-height: 0; scroll-padding-bottom: 8px; padding-bottom: 8px; }
+
+  .file-row {
+    display: grid; grid-template-columns: 1fr 130px;
+    padding: 13px 18px; font-size: 14px; cursor: pointer;
+    align-items: center;
+    border-bottom: 1px solid var(--md-sys-color-surface-container);
+    transition: background .1s;
+  }
+  .file-row:last-child { border-bottom: none; }
+  .file-row:hover    { background: var(--md-sys-color-surface-container-low); }
+  .file-row.selected { background: var(--md-sys-color-primary-container); }
+  .file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 12px; font-family: 'U5Font', 'Google Sans', 'Noto Sans SC', sans-serif; }
+  .file-size { color: var(--md-sys-color-on-surface-variant); text-align: right; }
+
+  .empty-state {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px; padding: 64px 32px;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  .empty-state .material-icons-round { font-size: 48px; opacity: .35; }
+  .empty-state p { font-size: 14px; }
+
+  .detail-card {
+    background: var(--md-sys-color-surface-container-lowest);
+    border-radius: var(--md-shape-corner-large);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    padding: 14px 18px; display: flex; align-items: center; gap: 14px; flex-shrink: 0;
+  }
+  .detail-icon {
+    width: 44px; height: 44px; background: var(--md-sys-color-surface-container);
+    border-radius: var(--md-shape-corner-medium);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--md-sys-color-on-surface-variant); font-size: 22px;
+    flex-shrink: 0; transition: background .2s, color .2s;
+  }
+  .detail-icon.has-file { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-primary); }
+  .detail-text { flex: 1; min-width: 0; }
+  .detail-name { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; font-family: 'U5Font', 'Google Sans', 'Noto Sans SC', sans-serif; }
+  .detail-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .detail-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  .btn-filled {
+    display: flex; align-items: center; gap: 6px; padding: 10px 20px;
+    background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
+    border: none; border-radius: 100px; font-size: 14px; font-weight: 500; font-family: inherit;
+    cursor: pointer; transition: filter .15s, opacity .25s;
+  }
+  .btn-filled:hover { filter: brightness(1.1); }
+  .btn-filled:disabled { opacity: .38; cursor: not-allowed; filter: none; }
+  .btn-filled .material-icons-round { font-size: 18px; }
+  .btn-tonal {
+    display: flex; align-items: center; gap: 6px; padding: 10px 20px;
+    background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
+    border: none; border-radius: 100px; font-size: 14px; font-weight: 500; font-family: inherit;
+    cursor: pointer; transition: filter .15s, opacity .25s;
+  }
+  .btn-tonal:hover { filter: brightness(.95); }
+  .btn-tonal:disabled { opacity: .38; cursor: not-allowed; filter: none; }
+  .btn-tonal .material-icons-round { font-size: 18px; }
+
+  .dialog-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.38);
+    display: none; align-items: center; justify-content: center; z-index: 300;
+  }
+  .dialog-overlay.open    { display: flex; animation: overlayIn  .18s forwards; }
+  .dialog-overlay.closing { display: flex; animation: overlayOut .2s  forwards; }
+  @keyframes overlayIn  { from{opacity:0} to{opacity:1} }
+  @keyframes overlayOut { from{opacity:1} to{opacity:0} }
+  .dialog {
+    background: var(--md-sys-color-surface-container-lowest);
+    border-radius: var(--md-shape-corner-extra-large);
+    padding: 24px; width: 90%; max-width: 520px; max-height: 80vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  }
+  .dialog-overlay.open    .dialog { animation: slideUp   .22s ease-out forwards; }
+  .dialog-overlay.closing .dialog { animation: slideDown .2s  ease-in  forwards; }
+  @keyframes slideUp   { from{transform:translateY(16px);opacity:.5} to{transform:translateY(0);opacity:1} }
+  @keyframes slideDown { from{transform:translateY(0);opacity:1} to{transform:translateY(20px);opacity:0} }
+  .dialog-icon { width: 48px; height: 48px; background: var(--md-sys-color-primary-container); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-primary); font-size: 24px; margin-bottom: 16px; }
+  .dialog-title { font-size: 18px; font-weight: 500; margin-bottom: 8px; }
+  .dialog-body { font-size: 14px; color: var(--md-sys-color-on-surface-variant); line-height: 1.6; flex: 1; overflow-y: auto; margin-bottom: 16px; }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+  .info-grid { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: start; }
+  .info-label { font-size: 12px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); padding-top: 8px; }
+  .info-value { font-size: 13px; background: var(--md-sys-color-surface-container); border-radius: var(--md-shape-corner-small); padding: 6px 10px; font-family: 'U5Font', 'Google Sans', 'Noto Sans SC', sans-serif; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; word-break: break-all; }
+  .copy-btn { background: none; border: none; cursor: pointer; color: var(--md-sys-color-primary); flex-shrink: 0; display: flex; align-items: center; padding: 0; transition: opacity .15s; }
+  .copy-btn:hover { opacity: .7; }
+  .copy-btn .material-icons-round { font-size: 16px; }
+
+  #snackbar {
+    position: fixed; bottom: 24px; left: 50%;
+    background: #1A1C27; color: #F8F9FF;
+    padding: 12px 20px; border-radius: 12px;
+    font-size: 14px; z-index: 500; pointer-events: none;
+    display: flex; align-items: center; gap: 8px; white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,.28);
+    opacity: 0; visibility: hidden;
+    transform: translateX(-50%) translateY(80px);
+  }
+  #snackbar.show {
+    visibility: visible;
+    animation: snackIn .35s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  #snackbar.hide {
+    visibility: visible;
+    animation: snackOut .3s ease-in forwards;
+  }
+  @keyframes snackIn {
+    from { transform: translateX(-50%) translateY(80px); opacity: 0; }
+    to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+  }
+  @keyframes snackOut {
+    from { transform: translateX(-50%) translateY(0);    opacity: 1; }
+    to   { transform: translateX(-50%) translateY(80px); opacity: 0; }
+  }
+  #snackbar .material-icons-round { font-size: 18px; color: #A8C7FA; }
+
+  @media (max-width: 600px) {
+    .app-title { font-size: 17px; }
+    #main-app { padding: 10px; gap: 8px; }
+    .detail-actions { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top-app-bar">
+  <div class="app-icon"><span class="material-icons-round">extension</span></div>
+  <div class="app-title">蛋仔派对 资源获取器</div>
+  <div class="version-chip" id="version-chip">
+    <span class="material-icons-round">schedule</span>
+    <span id="version-text">—</span>
+  </div>
+</header>
+
+<div id="loading-screen">
+  <div class="loading-icon-wrap">
+    <svg xmlns="http://www.w3.org/2000/svg" height="40" width="40" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17 12l-5 5-5-5 1.41-1.41L11 13.17V6h2v7.17l2.59-2.58L17 12zM5 18h14v2H5v-2z"/>
+    </svg>
+  </div>
+  <div class="loading-title">正在加载资源索引...</div>
+  <div class="loading-sub">连接网易服务器中</div>
+  <div class="linear-progress"><div class="linear-progress-bar"></div></div>
+</div>
+
+<div id="error-screen">
+  <div class="error-icon-wrap"><span class="material-icons-round">wifi_off</span></div>
+  <div class="error-title">加载失败</div>
+  <p class="error-msg" id="error-msg">无法获取资源索引，请检查网络连接后重试。</p>
+  <button class="btn-filled" onclick="init()" style="margin-top:8px">
+    <span class="material-icons-round">refresh</span>重新加载
+  </button>
+</div>
+
+<div id="main-app">
+  <div class="filter-row">
+    <div class="segment-group">
+      <button class="segment-btn active" id="btn-npk" onclick="setCategory('NPK')">
+        <span class="material-icons-round">inventory_2</span>NPK
+      </button>
+      <button class="segment-btn" id="btn-ppk" onclick="setCategory('PPK')">
+        <span class="material-icons-round">folder_zip</span>PPK
+      </button>
+    </div>
+    <div class="search-bar">
+      <span class="material-icons-round">search</span>
+      <input type="text" id="search-input" placeholder="搜索文件名..." oninput="onSearch()">
+      <button class="search-clear" id="search-clear" onclick="clearSearch()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <span class="count-label" id="count-label"></span>
+  </div>
+
+  <div class="list-card">
+    <div class="list-header">
+      <div class="col-sort" onclick="sortBy('name')">
+        文件名 <span class="material-icons-round visible" id="sort-name-icon">arrow_upward</span>
+      </div>
+      <div class="col-sort col-right" onclick="sortBy('size')">
+        大小 <span class="material-icons-round" id="sort-size-icon">arrow_upward</span>
+      </div>
+    </div>
+    <div class="list-body" id="list-body">
+      <div class="empty-state">
+        <span class="material-icons-round">hourglass_empty</span>
+        <p>等待加载...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-card">
+    <div class="detail-icon" id="detail-icon"><span class="material-icons-round">description</span></div>
+    <div class="detail-text">
+      <div class="detail-name" id="detail-name">未选择文件</div>
+      <div class="detail-meta" id="detail-meta"></div>
+    </div>
+    <div class="detail-actions">
+      <button class="btn-tonal" id="btn-info" onclick="openInfoDialog()" disabled>
+        <span class="material-icons-round">info</span>文件信息
+      </button>
+      <button class="btn-filled" id="btn-open" onclick="openFile()" disabled>
+        <span class="material-icons-round">open_in_new</span>下载
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-overlay" id="info-dialog">
+  <div class="dialog">
+    <div class="dialog-icon"><span class="material-icons-round">insert_drive_file</span></div>
+    <div class="dialog-title">文件信息</div>
+    <div class="dialog-body"><div class="info-grid" id="info-grid"></div></div>
+    <div class="dialog-actions">
+      <button class="btn-filled" onclick="closeInfoDialog()">
+        <span class="material-icons-round">close</span>关闭
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="snackbar">
+  <span class="material-icons-round">check_circle</span>
+  <span id="snackbar-text"></span>
+</div>
+
+<script>
+const INDEX_URL = "https://u5.update.netease.com/pl/pre_npk_version_android.txt";
+const SERVER    = "https://u5-06.gph.netease.com";
+const SKIP_KEYS = new Set(["npkext_file_info","npkext_file_full_info","npkext_file_info_muti","npkext_file_info_new","npk_full_info_bin"]);
+
+let indexData=null,version="",allItems=[],filteredItems=[],currentItem=null;
+let sortCol="name",sortAsc=true,category="NPK";
+
+const ASSETS_PPK=new Set(["assets_d.ppk","assets_d.ppk.map","assets_file_storage","assets.ppk","assets.ppk.map"]);
+
+function getPatchVersion(ver){
+  return ver.replace(/^npkext_/,"patch_");
+}
+function getSubdir(f){
+  if(f.startsWith("sub_skin_voice"))return"sub_skin_voice";
+  if(f.startsWith("sub_sky_box"))return"sub_sky_box";
+  if(f.startsWith("sub_sound"))return"sub_sound";
+  if(f.startsWith("sub_skin"))return"sub_skin";
+  if(f.startsWith("sub_pet"))return"sub_pet";
+  if(f.startsWith("sub_part"))return"sub_part";
+  if(f.startsWith("sub_emoji"))return"sub_emoji";
+  if(f.startsWith("sub_editor"))return null;
+  return"";
+}
+function buildUrl(ver,fname){
+  if(ASSETS_PPK.has(fname)) return`${SERVER}/${getPatchVersion(ver)}/${fname}`;
+  const sub=getSubdir(fname);
+  if(sub===null)return null;
+  return sub?`${SERVER}/${ver}/${sub}/${fname}`:`${SERVER}/${ver}/${fname}`;
+}
+function fmtSize(s){
+  if(s>=1<<30)return(s/(1<<30)).toFixed(2)+" GB";
+  if(s>=1<<20)return(s/(1<<20)).toFixed(2)+" MB";
+  if(s>=1<<10)return(s/(1<<10)).toFixed(2)+" KB";
+  return s+" B";
+}
+function parseVersion(v){
+  const m=v.match(/_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})_/);
+  return m?`${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}`:v;
+}
+
+let isLoading=false;
+async function init(){
+  if(isLoading)return;
+  isLoading=true;
+  showLoading();
+  try{
+    const resp=await fetch(INDEX_URL+"?t="+Date.now());
+    indexData=await resp.json();
+    version=indexData.npkext_version||"";
+  }catch(e){
+    isLoading=false;
+    showError("无法获取资源索引，请检查网络连接后重试。\n("+e.message+")");
+    return;
+  }
+  isLoading=false;
+  if(version){
+    document.getElementById("version-text").textContent=parseVersion(version);
+    document.getElementById("version-chip").classList.add("visible");
+  }
+  showMain();
+  refreshList();
+}
+
+function showLoading(){
+  const ls=document.getElementById("loading-screen");
+  ls.style.display="flex";ls.classList.remove("fade-out");
+  document.getElementById("error-screen").style.display="none";
+  document.getElementById("main-app").classList.remove("visible");
+  document.getElementById("version-chip").classList.remove("visible");
+}
+function showError(msg){
+  document.getElementById("loading-screen").style.display="none";
+  document.getElementById("error-screen").style.display="flex";
+  document.getElementById("error-msg").textContent=msg;
+}
+function showMain(){
+  const ls=document.getElementById("loading-screen");
+  ls.classList.add("fade-out");
+  const done=()=>{ls.style.display="none";ls.classList.remove("fade-out");};
+  ls.addEventListener("transitionend",done,{once:true});
+  setTimeout(done,600);
+  document.getElementById("error-screen").style.display="none";
+  document.getElementById("main-app").classList.add("visible");
+}
+
+let categoryTimer;
+function setCategory(cat){
+  document.getElementById("btn-npk").classList.toggle("active",cat==="NPK");
+  document.getElementById("btn-ppk").classList.toggle("active",cat==="PPK");
+  clearTimeout(categoryTimer);
+  categoryTimer=setTimeout(()=>{
+    category=cat;
+    clearCurrentItem();
+    refreshList();
+  },80);
+}
+
+function parseItems(cat){
+  const secs=cat==="NPK"?["npk","npkext","extra_npk","script_patch_npk"]:["ppk","ppkext"];
+  const items=[];
+  for(const sec of secs){
+    const d=indexData[sec];
+    if(!d||typeof d!=="object")continue;
+    for(const[fname,info]of Object.entries(d)){
+      if(SKIP_KEYS.has(fname))continue;
+      if(!Array.isArray(info)||info.length<2)continue;
+      const[size,md5]=info;
+      if(typeof size!=="number"||typeof md5!=="string")continue;
+      const url=buildUrl(version,fname);
+      if(url===null)continue;
+      items.push({name:fname,size,md5,url});
+    }
+  }
+  return items;
+}
+
+function refreshList(){
+  allItems=parseItems(category);
+  sortCol="name";sortAsc=true;setSortIcons();
+  document.getElementById("search-input").value="";
+  document.getElementById("search-clear").style.display="none";
+  applyFilter();
+}
+
+function applyFilter(){
+  const kw=document.getElementById("search-input").value.trim().toLowerCase();
+  let items=kw?allItems.filter(i=>i.name.toLowerCase().includes(kw)):[...allItems];
+  if(sortCol==="name")items.sort((a,b)=>(sortAsc?1:-1)*a.name.localeCompare(b.name));
+  else items.sort((a,b)=>(sortAsc?1:-1)*(a.size-b.size));
+  filteredItems=items;
+  renderList();
+  const t=filteredItems.length;
+  document.getElementById("count-label").textContent=kw?`找到 ${t} 个结果`:`共 ${t} 个文件`;
+}
+
+let sortTimer;
+function sortBy(col){
+  if(sortCol===col)sortAsc=!sortAsc;else{sortCol=col;sortAsc=true;}
+  setSortIcons();
+  clearTimeout(sortTimer);
+  sortTimer=setTimeout(()=>applyFilter(),80);
+}
+function setSortIcons(){
+  const ni=document.getElementById("sort-name-icon");
+  const si=document.getElementById("sort-size-icon");
+  ni.className="material-icons-round"+(sortCol==="name"?" visible":"");
+  ni.textContent=sortAsc?"arrow_upward":"arrow_downward";
+  si.className="material-icons-round"+(sortCol==="size"?" visible":"");
+  si.textContent=sortAsc?"arrow_upward":"arrow_downward";
+}
+
+let searchTimer;
+function onSearch(){
+  document.getElementById("search-clear").style.display=
+    document.getElementById("search-input").value?"flex":"none";
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(applyFilter,120);
+}
+function clearSearch(){
+  document.getElementById("search-input").value="";
+  document.getElementById("search-clear").style.display="none";
+  applyFilter();
+}
+
+function escHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function renderList(){
+  const body=document.getElementById("list-body");
+  if(!filteredItems.length){
+    body.innerHTML='<div class="empty-state"><span class="material-icons-round">search_off</span><p>没有找到匹配的文件</p></div>';
+    return;
+  }
+  const selName=currentItem?.name;
+  body.innerHTML=filteredItems.map((item,idx)=>
+    `<div class="file-row${item.name===selName?" selected":""}" data-idx="${idx}" onclick="selectItem(${idx})">
+      <span class="file-name" title="${escHtml(item.name)}">${escHtml(item.name)}</span>
+      <span class="file-size">${item.size>0?fmtSize(item.size):"—"}</span>
+    </div>`).join("");
+}
+
+function selectItem(idx){
+  const item=filteredItems[idx];
+  if(!item)return;
+  document.querySelector(".file-row.selected")?.classList.remove("selected");
+  currentItem=item;
+  document.querySelector(`.file-row[data-idx="${idx}"]`)?.classList.add("selected");
+  document.getElementById("detail-icon").classList.add("has-file");
+  document.getElementById("detail-name").textContent=currentItem.name;
+  document.getElementById("detail-meta").textContent=
+    `大小: ${currentItem.size>0?fmtSize(currentItem.size):"—"}  ·  MD5: ${currentItem.md5}`;
+  document.getElementById("btn-open").disabled=!currentItem.url;
+  document.getElementById("btn-info").disabled=false;
+}
+function clearCurrentItem(){
+  currentItem=null;
+  document.querySelector(".file-row.selected")?.classList.remove("selected");
+  document.getElementById("detail-icon").classList.remove("has-file");
+  document.getElementById("detail-name").textContent="未选择文件";
+  document.getElementById("detail-meta").textContent="";
+  document.getElementById("btn-open").disabled=true;
+  document.getElementById("btn-info").disabled=true;
+}
+let openLock=false;
+function openFile(){
+  if(!currentItem?.url||openLock)return;
+  openLock=true;
+  setTimeout(()=>openLock=false,1000);
+  window.open(currentItem.url,"_blank");
+}
+
+function openInfoDialog(){
+  if(!currentItem)return;
+  const el=document.getElementById("info-dialog");
+  if(el.classList.contains("closing")){
+    el.classList.remove("closing");
+  }
+  if(el.classList.contains("open")){
+    el.classList.remove("open");
+  }
+  const fields=[["文件名",currentItem.name],["大小",currentItem.size>0?fmtSize(currentItem.size):"—"],["MD5",currentItem.md5],["下载链接",currentItem.url||"—"]];
+  const grid=document.getElementById("info-grid");
+  grid.innerHTML="";
+  fields.forEach(([label,value])=>{
+    const lbl=document.createElement("div");
+    lbl.className="info-label";
+    lbl.textContent=label;
+    const val=document.createElement("div");
+    val.className="info-value";
+    const span=document.createElement("span");
+    span.style.flex="1";
+    span.textContent=value;
+    const btn=document.createElement("button");
+    btn.className="copy-btn";
+    btn.title="复制";
+    btn.dataset.copy=value;
+    btn.innerHTML='<span class="material-icons-round">content_copy</span>';
+    val.appendChild(span);
+    val.appendChild(btn);
+    grid.appendChild(lbl);
+    grid.appendChild(val);
+  });
+  void el.offsetWidth;
+  el.classList.add("open");
+}
+function closeInfoDialog(){
+  const el=document.getElementById("info-dialog");
+  if(el.classList.contains("closing")||!el.classList.contains("open"))return;
+  el.classList.add("closing");
+  const done=()=>{el.classList.remove("open","closing");};
+  el.addEventListener("animationend",done,{once:true});
+  setTimeout(done,300);
+}
+document.getElementById("info-dialog").addEventListener("click",e=>{if(e.target===document.getElementById("info-dialog"))closeInfoDialog();});
+
+document.getElementById("info-grid").addEventListener("click",e=>{
+  const btn=e.target.closest(".copy-btn");
+  if(btn&&btn.dataset.copy!==undefined)copyText(btn.dataset.copy);
+});
+
+let snackTimer,hideTimer;
+function showSnack(msg){
+  const el=document.getElementById("snackbar");
+  document.getElementById("snackbar-text").textContent=msg;
+  clearTimeout(snackTimer);
+  clearTimeout(hideTimer);
+  el.classList.remove("show","hide");
+  el.style.visibility="visible";
+  el.style.animation="none";
+  void el.offsetWidth;
+  el.style.animation="";
+  el.classList.add("show");
+  snackTimer=setTimeout(()=>{
+    el.classList.remove("show");
+    el.classList.add("hide");
+    const hideDone=()=>{el.classList.remove("hide");el.style.visibility="hidden";};
+    el.addEventListener("animationend",hideDone,{once:true});
+    hideTimer=setTimeout(hideDone,400);
+  },1500);
+}
+let copyLock=false;
+function copyText(text){
+  if(copyLock)return;
+  copyLock=true;
+  setTimeout(()=>copyLock=false,50);
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(text).then(()=>showSnack("已复制到剪贴板")).catch(()=>fallbackCopy(text));
+  }else{
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text){
+  const ta=document.createElement("textarea");
+  ta.value=text;
+  ta.style.cssText="position:fixed;left:-9999px;top:-9999px;opacity:0";
+  document.body.appendChild(ta);
+  ta.focus();ta.select();
+  try{
+    document.execCommand("copy");
+    showSnack("已复制到剪贴板");
+  }catch(e){
+    showSnack("复制失败");
+  }
+  document.body.removeChild(ta);
+}
+
+init();
+</script>
+</body>
+</html>
